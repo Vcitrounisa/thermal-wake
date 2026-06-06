@@ -23,7 +23,7 @@ from matplotlib.patches import Rectangle
 # -- I/O paths ---------------------------------------------------------------
 here    = Path(__file__).resolve().parent
 in_file = here / "gk_wake_results.npz"
-fig_dir = here.parent / "figs"
+fig_dir = here / "figs"
 fig_dir.mkdir(parents=True, exist_ok=True)
 
 data = np.load(in_file, allow_pickle=False)
