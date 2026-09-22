@@ -11,9 +11,6 @@ thin nanolayer with a square obstacle, together with the scripts that
 regenerate every figure and every quantitative claim in the paper, including
 the verification and validation studies added in revision.
 
-Everything here is deterministic: the scheme is explicit, there is no random
-input, and re-running the pipeline reproduces the distributed `.npz`/`.json`
-files bit for bit on the same platform.
 
 ## Quick start
 
