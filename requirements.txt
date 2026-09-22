@@ -1,0 +1,22 @@
+# Runtime dependencies of the GK thermal-wake solver.
+#
+# Lower bounds only: nothing in the code relies on recent API changes, and the
+# results are insensitive to the exact versions (the scheme is explicit and
+# deterministic; numba and numpy paths agree to machine precision, see
+# run_selftest.py).
+#
+# numba is optional: gk_solver falls back to the numpy reference
+# implementation when it is not importable, at a large cost in wall time.
+
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+numba>=0.59          # optional, strongly recommended
+
+# ---------------------------------------------------------------------------
+# Environment used for the published results
+# ---------------------------------------------------------------------------
+# The exact versions are pinned in requirements-frozen.txt, produced with
+# `pip freeze` on the machine that generated the distributed .npz/.json
+# files: Python 3.12.4 (clang 15, macOS), numpy 2.5.3, scipy 1.18.1,
+# matplotlib 3.11.2, numba 0.67.0 (llvmlite 0.49.0).
