@@ -1,0 +1,10 @@
+{
+  "t_long": 1200.0,
+  "ic_t1200_max_dT_wake_region_xgt1p5": 0.0012721112763923736,
+  "ic_t1200_max_dT_global": 0.02853322459148544,
+  "ic_t1200_max_dh_global": 2.537666323606441e-05,
+  "steady_min_hx_200x100": -0.0005107899771583526,
+  "steady_min_hx_400x200_relaxed": 2.6593321716518115e-05,
+  "t_relax_fine": 30.0,
+  "note": "200x100 steady states from t=1200 runs (fourier-rest vs cold-rest ICs); steady_min_hx_200x100 is the fourier-rest run. 400x200 steady state relaxed t=30 from the interpolated coarse steady state."
+}
