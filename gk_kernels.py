@@ -2,14 +2,11 @@
 gk_kernels.py
 =============
 
-Numba-accelerated time loops for gk_solver.py.  The kernels reproduce the
-numpy reference implementation operation-by-operation (same stencils, same
-update order); gk_solver.solve() falls back to the numpy path when numba is
+Numba-accelerated time loops for gk_solver.py.
+gk_solver.solve() falls back to the numpy path when numba is
 not available, and the two paths agree to machine precision (see
 run_selftest.py).
 """
-
-from __future__ import annotations
 
 import math
 

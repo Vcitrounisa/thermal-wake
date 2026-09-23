@@ -5,21 +5,14 @@ run_baseline_diagnostics.py
 Positivity and thermal-shadow diagnostics of the baseline switch-on run
 produced by ``gk_thermal_wake.py`` (cold start, t_end = 400, 200 x 100).
 
-This script owns every number that Sec. III A 2-4 and Sec. IV A of the paper
-quote for the baseline wake.  It only post-processes ``gk_wake_results.npz``;
-it does not integrate anything, so it runs in a second.
-
 Two conventions are reported side by side for the near-wall exclusion, since
 the distinction matters for the wording of the positivity statement:
 
-  * ``halo = 0.10``  : the value historically used for the paper's statement
-                       (2.5 cells at the 200 x 100 baseline resolution);
-  * ``halo = dx``    : a genuine one-cell ring around the obstacle.
+  * ``halo = 0.10``  : 2.5 cells at the 200 x 100 resolution
+  * ``halo = dx``    : a one-cell ring around the obstacle.
 
 Writes baseline_coldstart_summary.json.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -60,9 +53,6 @@ def positive_from(halo):
 
 
 def smooth_121(F):
-    """Exact annihilator of the odd-even (checkerboard) grid mode: the same
-    1-2-1 cell average that `make_paper_figures.py` applies to the displayed
-    temperature fields.  See Sec. III A of the paper."""
     G = F.astype(float).copy()
     G[:, 1:-1] = 0.25 * F[:, :-2] + 0.5 * F[:, 1:-1] + 0.25 * F[:, 2:]
     H = G.copy()
@@ -84,10 +74,6 @@ TF = 1.0 - xc / Lx
 
 def probe_devT(x0, y0):
     """T - T_F at (x0, y0), bilinearly interpolated on the cell centres.
-
-    The probe sits on a cell corner of the baseline mesh, so a nearest-cell
-    evaluation would be biased by half a cell; the same bilinear convention is
-    used in run_wake_probe.py.  (This diagnostic is not quoted in the paper.)
     """
     yc = r["yc"]
     i = int(np.clip(np.searchsorted(xc, x0) - 1, 0, xc.size - 2))
@@ -119,10 +105,7 @@ summary = {
     "hx_positive_outside_one_cell_from_t": t_pos_1cell,
     "one_cell_halo_dx": dx,
     "note": ("'halo' excludes fluid cells within the given distance of the "
-             "obstacle faces. The paper's phrase 'outside the first near-wall "
-             "cell layer' corresponds to hx_positive_outside_one_cell_from_t; "
-             "the value 100 quoted previously corresponds to the 0.10 halo "
-             "(2.5 cells at this resolution)."),
+             "obstacle faces."),
 }
 
 (here / "baseline_coldstart_summary.json").write_text(json.dumps(summary, indent=2))

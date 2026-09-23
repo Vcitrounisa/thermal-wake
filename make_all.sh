@@ -4,14 +4,13 @@
 #
 #   I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro,
 #   "Thermal shadows in non-linear phonon hydrodynamics: Stokes-like
-#    heat-flux wakes past a bluff body", Proc. R. Soc. A (2026).
+#    heat-flux wakes past a bluff body", submitted to Proc. R. Soc. A (2026).
 #
 # Usage:
 #   ./make_all.sh                 # everything except the long-time study
-#   ./make_all.sh --with-longrun  # also run_longrun.py (~1 h, see its docstring)
+#   ./make_all.sh --with-longrun  # also run_longrun.py
 #
-# The order below is the dependency order: make_new_figures.py consumes the
-# output of five different run_*.py scripts and of the two baseline runs.
+
 
 set -euo pipefail
 

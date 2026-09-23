@@ -19,16 +19,10 @@ This script:
   (1) validates the analytic formula against the 2D code (slip ghost cells)
       at several (Kn, v) pairs;
   (2) tabulates kappa_eff/kappa_bulk vs Kn for several accommodation
-      coefficients v (plus the no-slip and Fourier limits);
-  (3) maps the curves onto ribbon width w for graphite, to be compared with
-      the width-dependent conductivity measured in isotopically purified
-      graphite ribbons [Huang et al. 2023] and predicted from first
-      principles [Ding et al. 2018].
+      coefficients v (plus the no-slip limit);
 
 Writes experiment_results.npz + experiment_summary.json.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -54,7 +48,7 @@ def slip_coeffs(Kn, v):
 val = []
 for Kn_i, v in [(0.3, 0.9), (0.7, 0.9), (0.7, 0.3), (1.5, 0.6)]:
     C, alpha = slip_coeffs(Kn_i, v)
-    r = solve(Kn=Kn_i, Lx=2.0, Ly=1.0, Nx=96, Ny=48, obstacle=False,
+    r = solve(Kn=Kn_i, Lx=2.0, Ly=1.0, Nx=96, Ny=48, obstacle=False, ic="fourier-rest",
               tEnd=80.0, tSnap=(80.0,), sidewalls="slip",
               slip_C=C, slip_alpha=alpha, nonlinear=False,
               steady_tol=1.0e-9, diag_every=200, verbose=False)
@@ -67,7 +61,7 @@ for Kn_i, v in [(0.3, 0.9), (0.7, 0.9), (0.7, 0.3), (1.5, 0.6)]:
           f"  rel.err={val[-1]['rel_err']:.2e}")
 
 # no-slip validation point
-r = solve(Kn=0.7, Lx=2.0, Ly=1.0, Nx=96, Ny=48, obstacle=False,
+r = solve(Kn=0.7, Lx=2.0, Ly=1.0, Nx=96, Ny=48, obstacle=False, ic="fourier-rest",
           tEnd=80.0, tSnap=(80.0,), sidewalls="noslip", nonlinear=False,
           steady_tol=1.0e-9, diag_every=200, verbose=False)
 k_num = kappa_eff(r)

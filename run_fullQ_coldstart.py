@@ -3,13 +3,11 @@ run_fullQ_coldstart.py
 ======================
 
 Full three-field run (independent Q tensor, eps = tau_Q/tau_R = 0.02) from
-the physically realizable cold-start initial state, integrated to t = 400,
-for the closure-vs-full overlay of the Q figure at the new baseline.
+the cold-start initial state, integrated to t = 400,
+for the closure-vs-full overlay of the Q figure at the paper baseline.
 
 Writes fullQ_coldstart.npz.
 """
-
-from __future__ import annotations
 
 import numpy as np
 

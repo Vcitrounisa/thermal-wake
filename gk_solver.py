@@ -27,8 +27,6 @@ update, so the time step is not limited by eps.
 The default options reproduce the simulation reported in the paper.
 """
 
-from __future__ import annotations
-
 import time
 
 import numpy as np
@@ -121,9 +119,9 @@ def slip_ghost_coeffs(C, alpha, Kn, dy):
 def solve(
     Kn=0.7, Lx=8.0, Ly=4.0, Nx=200, Ny=100,
     obstacle=True, xObs=3.0, yObs=None, LObs=1.0,
-    tEnd=18.0, CFL=0.20, tSnap=(0.5, 2.0, 5.0, 10.0, 18.0),
+    tEnd=400.0, CFL=0.20, tSnap=(5.0, 30.0, 100.0, 400.0),
     Thot=1.0, Thot_ramp=0.0,     # >0: hot wall raised as Thot*(1-exp(-t/Thot_ramp))
-    ic="fourier-rest",           # "fourier-rest" | "cold-rest" | "fourier-flux"
+    ic="cold-rest",              # "cold-rest" | "fourier-rest" | "fourier-flux"
     init=None,                   # (T0, hx0, hy0) arrays: restart state, overrides `ic`
     obstacle_fill="avg",         # "avg" | "frozen" | "compat"
     sidewalls="freeslip",        # "freeslip" | "noslip" | "slip"
@@ -273,11 +271,6 @@ def solve(
     for n in range(1, Nstep + 1):
 
         # 1. obstacle temperature fill --------------------------------------
-        # NOTE: the shifted arrays below are edge-clamped, so an obstacle cell
-        # touching the domain border would take itself as a neighbour, whereas
-        # the numba kernel skips out-of-range neighbours.  Irrelevant for every
-        # configuration used in the paper (the body is strictly interior), but
-        # the two paths would differ for a wall-mounted obstacle.
         if obstacle and obstacle_fill != "frozen":
             Tl = np.concatenate((T[:, :1], T[:, :-1]), axis=1)
             Tr = np.concatenate((T[:, 1:], T[:, -1:]), axis=1)

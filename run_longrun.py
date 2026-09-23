@@ -6,32 +6,22 @@ Long-time convergence studies quoted in Sec. III (initial condition) and in
 Sec. III A 1 c / Sec. IV A (fully converged steady state).
 
   (1) Initial-condition independence at long time.  The baseline wake is
-      integrated to t = 1200 (three times the t = 400 of the production run,
-      i.e. about thirty large-scale diffusive times) from two initial states,
+      integrated to t = 1200 from two initial states,
       "fourier-rest" and "cold-rest", and the two final fields are compared.
       The temperature comparison is reported both globally and restricted to
       the wake region x > 1.5, because the residual difference at t = 1200 is
-      concentrated in the inlet layer, where the switch-on run still carries
-      the (dynamically inert) odd-even grid mode excited by the discontinuous
-      start; see the discussion of the 1-2-1 average in Sec. III A.
+      concentrated in the inlet layer.
 
   (2) Fully converged steady state on the finest mesh.  The t = 1200 state of
       the 200 x 100 run is interpolated onto the 400 x 200 mesh and relaxed
-      for a further t = 30, which is long compared with the local relaxation
-      time near the body and short compared with the diffusive time of the
-      channel.  The sign of min h_x on this state is the fully-converged
+      for a further t = 30.  The sign of min h_x on this state is the fully-converged
       positivity statement of the paper.
 
 
-This script is expensive: the two t = 1200 runs are 3 675 000 steps each and
-the fine relaxation is 367 500 steps on 80 000 cells.  Expect of the order of
-an hour in total with the numba kernel.
 
 Writes ic_long_fourier-rest.npz, ic_long_cold-rest.npz, wake_fine_relaxed.npz
 and longrun_summary.json.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path

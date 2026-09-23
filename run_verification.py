@@ -15,8 +15,6 @@ Verification suite for the GK solver:
 Writes verification_results.npz and prints a summary table.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -38,7 +36,7 @@ errs = []
 prof = {}
 for Ny in grids:
     Nx = 2 * Ny
-    r = solve(Kn=KnC, Lx=Lch, Ly=R, Nx=Nx, Ny=Ny, obstacle=False,
+    r = solve(Kn=KnC, Lx=Lch, Ly=R, Nx=Nx, Ny=Ny, obstacle=False, ic="fourier-rest",
               tEnd=80.0, tSnap=(80.0,), Thot=Thot, sidewalls="noslip",
               nonlinear=False, steady_tol=1.0e-9, diag_every=200,
               verbose=False)
@@ -91,7 +89,7 @@ for G_step in [1.0, 3.0, 6.0, GNL]:
     sol_prev = bvp.sol(y_mesh)
     G_prev = G_step
 
-r = solve(Kn=KnC, Lx=Lch, Ly=R, Nx=128, Ny=64, obstacle=False,
+r = solve(Kn=KnC, Lx=Lch, Ly=R, Nx=128, Ny=64, obstacle=False, ic="fourier-rest",
           tEnd=80.0, tSnap=(80.0,), Thot=ThotNL, sidewalls="noslip",
           nonlinear=True, steady_tol=1.0e-9, diag_every=200, verbose=False)
 j = 64
@@ -122,12 +120,12 @@ def min_hx_halo(r, halo=0.15):
 
 wake = {}
 for (Nx, Ny) in [(100, 50), (200, 100), (400, 200)]:
-    r = solve(Nx=Nx, Ny=Ny, tSnap=(18.0,), verbose=False)
+    r = solve(Nx=Nx, Ny=Ny, ic="fourier-rest", tEnd=18.0, tSnap=(18.0,), verbose=False)
     wake[(Nx, Ny)] = r
     print(f"(c) wake {Nx}x{Ny}: min hx (fluid) = {np.min(r['hx_final'][~r['inObs']]):.4e}"
           f", min hx (halo 0.15) = {min_hx_halo(r):.4e}")
 
-# sample steady fields of all runs on the coarse-grid cell centres
+# sample the t = 18 fields of all runs on the coarse-grid cell centres
 def sample(r, X, Y):
     from scipy.interpolate import RegularGridInterpolator
     f_T = RegularGridInterpolator((r["yc"], r["xc"]), r["T_final"],
@@ -161,9 +159,7 @@ out["c_minhx_halo"] = np.array([min_hx_halo(wake[g])
 # (d) domain-length robustness (outflow condition placement)
 # ---------------------------------------------------------------------------
 r8 = wake[(200, 100)]
-r12 = solve(Lx=12.0, Nx=300, tSnap=(18.0,), verbose=False)
-# compare in the shared window x < 7 (temperature rescaled by the local
-# Fourier reference to remove the trivial change of the driving gradient)
+r12 = solve(Lx=12.0, Nx=300, ic="fourier-rest", tEnd=18.0, tSnap=(18.0,), verbose=False)
 jc = r8["Ny"] // 2
 x8, x12 = r8["xc"], r12["xc"]
 TF8 = 1.0 - x8 / 8.0

@@ -2,7 +2,7 @@
 make_new_figures.py
 ===================
 
-Builds the figures added in the revision:
+Builds the figures added after the revision round:
 
   figs/fig_verification.pdf/png  paper Fig. 2  channel benchmarks, grid
                                  convergence, full-vs-reduced O(eps) validation
@@ -20,8 +20,6 @@ Inputs (all produced by the run_*.py scripts, see README for the order):
   gk_wake_results.npz        gk_thermal_wake.py       (closure Q, cold start)
   fullQ_coldstart.npz        run_fullQ_coldstart.py   (full three-field Q)
 """
-
-from __future__ import annotations
 
 from pathlib import Path
 
@@ -241,8 +239,6 @@ ax = axes[0]
 for ic in labels:
     Tm = s[f"T_mid_{ic}"].copy()
     if ic == "cold-rest":
-        # remove the neutral odd-even (checkerboard) component left over from
-        # the discontinuous switch-on (see response text)
         Tm[1:-1] = 0.25 * Tm[:-2] + 0.5 * Tm[1:-1] + 0.25 * Tm[2:]
     Tm[obx] = np.nan
     st = styles[ic]

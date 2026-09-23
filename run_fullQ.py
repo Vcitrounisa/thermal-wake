@@ -13,20 +13,15 @@ Integrates the FULL three-field system
 for a sequence of relaxation-time ratios eps, and compares it with the
 reduced (closed) GK model used in the paper (formally eps -> 0).
 
-Two complementary statements are checked:
-  (i)  along the TRANSIENT (t = 2, 5) the distance between full and reduced
-       solutions scales as O(eps) -- the singular-perturbation estimate;
-  (ii) the quasi-stationary states coincide identically (for steady states
-       dQ/dt = 0 turns the Q-equation into the closure, for ANY tau_Q), so
-       the wake itself is tau_Q-independent.
+
+Along the TRANSIENT (t = 2, 5) the distance between full and reduced
+solutions scales as O(eps) -- the singular-perturbation estimate
 
 Also stores the Q fields of the full model and of the closure
 Q = -Kn^2 Phi grad h for the paper figure.
 
 Writes fullQ_results.npz + fullQ_summary.json.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -39,7 +34,7 @@ here = Path(__file__).resolve().parent
 tS = (2.0, 5.0, 18.0)
 
 print("--- reduced (closed) model")
-red = solve(tSnap=tS, verbose=False)
+red = solve(ic="fourier-rest", tEnd=18.0, tSnap=tS, verbose=False)
 fluid = ~red["inObs"]
 Qc = Q_from_closure(red)
 
@@ -50,7 +45,7 @@ errs_Q = []
 full_runs = {}
 for eps in eps_list:
     print(f"--- full model, eps = {eps}")
-    r = solve(full_Q=True, eps_Q=eps, tSnap=tS, verbose=False)
+    r = solve(ic="fourier-rest", tEnd=18.0, full_Q=True, eps_Q=eps, tSnap=tS, verbose=False)
     full_runs[eps] = r
     for k, t in enumerate(tS):
         eh = float(np.max(np.hypot(r["snap_hx"][k] - red["snap_hx"][k],

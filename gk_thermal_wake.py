@@ -4,7 +4,7 @@ gk_thermal_wake.py
 
 Baseline run of the non-linear, non-local Guyer-Krumhansl (GK) heat-transport
 solver for a 2D thin nanolayer with a square obstacle, driven by an imposed
-temperature difference.  The initial state is physically realizable: the layer
+temperature difference.  The initial state is defined as follows: the layer
 is in equilibrium with the cold reservoir (T = 0, h = 0) and the hot wall is
 switched on at t = 0; integration to t = 400 (about ten large-scale diffusive
 times) reaches the quasi-stationary wake.  The numerical scheme and all model options live in
@@ -29,8 +29,6 @@ snapshots feed the transient positivity diagnostics of
 
 Run:  python gk_thermal_wake.py        # writes gk_wake_results.npz
 """
-
-from __future__ import annotations
 
 from pathlib import Path
 

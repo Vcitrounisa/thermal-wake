@@ -5,10 +5,11 @@ run_ic_sensitivity.py
 Two studies on the baseline wake configuration:
 
   (1) Initial-condition independence: the quasi-steady state is an attractor.
-      Three initial states are integrated to t = 18:
-        - "fourier-rest"  : T = Fourier profile, h = 0        (paper baseline)
-        - "cold-rest"     : T = 0 everywhere,   h = 0         (equilibrium with
-                            the cold reservoir; hot wall switched on at t = 0)
+      Three initial states are integrated to t = 400 (snapshots at t = 18, 400):
+        - "cold-rest"     : T = 0 everywhere,   h = 0         (paper baseline:
+                            equilibrium with the cold reservoir; hot wall
+                            switched on at t = 0)
+        - "fourier-rest"  : T = Fourier profile, h = 0        (verification runs)
         - "fourier-flux"  : T = Fourier profile, h = G e_x    (Fourier-consistent
                             initial flux)
       and the pairwise differences of the final fields are reported.
@@ -16,15 +17,12 @@ Two studies on the baseline wake configuration:
   (2) Obstacle temperature-extension study:
         - "avg"    : neighbour-average fill (paper baseline)
         - "frozen" : no fill; T stays at its initial value inside the mask
-                     (turns the obstacle into an isothermal cold spot ->
-                     documents the artefact, referee 2 question 1)
+                     (turns the obstacle into an isothermal cold spot)
         - "compat" : fill honouring the wall-compatibility relation
                      dT/dn = Kn^2 [div(Phi grad h)].n
 
 Writes ic_sensitivity_results.npz + ic_sensitivity_summary.json.
 """
-
-from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -75,7 +73,8 @@ out["inobs_x"] = (np.abs(base["xc"] - base["xObs"]) <= base["LObs"] / 2)
 fills = {}
 for fill in ["avg", "frozen", "compat"]:
     print(f"--- obstacle_fill = {fill}")
-    fills[fill] = solve(obstacle_fill=fill, tSnap=(18.0,), verbose=False)
+    fills[fill] = solve(obstacle_fill=fill, ic="fourier-rest", tEnd=18.0,
+                        tSnap=(18.0,), verbose=False)
 
 summary["fill_diffs"] = {}
 for fill in ["frozen", "compat"]:
@@ -95,8 +94,7 @@ out["Xc"], out["Yc"] = base["Xc"], base["Yc"]
 out["inObs"] = base["inObs"]
 out["xObs"], out["yObs"], out["LObs"] = base["xObs"], base["yObs"], base["LObs"]
 
-# energy budget of the frozen run: net heat absorbed by the obstacle boundary
-# (diagnosed by the flux divergence around the mask)
+
 np.savez(here / "ic_sensitivity_results.npz", **out)
 (here / "ic_sensitivity_summary.json").write_text(json.dumps(summary, indent=2))
 print(json.dumps(summary, indent=2))

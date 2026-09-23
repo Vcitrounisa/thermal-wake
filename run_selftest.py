@@ -2,12 +2,10 @@
 run_selftest.py
 ===============
 
-Cross-check of the two independent implementations of the time loop
+Cross-check of the two implementations of the time loop
 (numpy reference vs numba kernel): short runs of every model variant must
 agree to machine precision.
 """
-
-from __future__ import annotations
 
 import numpy as np
 
@@ -17,18 +15,18 @@ from gk_solver import solve
 # importable: without numba, gk_solver.solve silently falls back to the numpy
 # reference path and the test would compare numpy against numpy.
 try:
-    import gk_kernels  # noqa: F401
-except Exception as exc:                                   # pragma: no cover
+    import gk_kernels
+except Exception as exc:
     raise SystemExit(
         f"run_selftest.py needs the numba kernel to be importable, but "
         f"`import gk_kernels` failed with: {exc!r}\n"
         f"Install numba (`pip install numba`) and re-run; without it the "
         f"solver still works on the numpy path, but this cross-check is "
-        f"vacuous.")
+        f"not meaningful.")
 
 CASES = [
-    dict(),                                             # baseline wake
-    dict(ic="cold-rest"),
+    dict(),                                             
+    dict(ic="cold-rest"),                                       # baseline wake
     dict(ic="fourier-flux"),
     dict(obstacle_fill="frozen"),
     dict(obstacle_fill="compat"),
@@ -52,7 +50,8 @@ CASES.append(dict(init=(np.maximum(0.0, 1.0 - _Xc / _Lx),
 
 ok = True
 for kw in CASES:
-    kw = dict(kw, tEnd=0.5, tSnap=(0.5,), verbose=False, diag_every=25)
+    kw = dict({"ic": "fourier-rest", **kw}, tEnd=0.5, tSnap=(0.5,), verbose=False,
+              diag_every=25)
     a = solve(use_numba=False, **kw)
     b = solve(use_numba=True, **kw)
     dT = np.max(np.abs(a["T_final"] - b["T_final"]))

@@ -1,9 +1,7 @@
 # Runtime dependencies of the GK thermal-wake solver.
 #
 # Lower bounds only: nothing in the code relies on recent API changes, and the
-# results are insensitive to the exact versions (the scheme is explicit and
-# deterministic; numba and numpy paths agree to machine precision, see
-# run_selftest.py).
+# results are insensitive to the exact versions.
 #
 # numba is optional: gk_solver falls back to the numpy reference
 # implementation when it is not importable, at a large cost in wall time.

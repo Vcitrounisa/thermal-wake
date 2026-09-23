@@ -11,8 +11,6 @@ publication-ready figures into ./figs/ :
 
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import matplotlib as mpl
@@ -77,9 +75,6 @@ def mask_obstacle(F):
 
 
 def smooth_T(F):
-    """Remove the dynamically inert odd-even (checkerboard) component from a
-    displayed temperature field with the exact annihilating 1-2-1 average in
-    both directions (see the numerics section of the paper)."""
     G = F.astype(float).copy()
     G[:, 1:-1] = 0.25 * F[:, :-2] + 0.5 * F[:, 1:-1] + 0.25 * F[:, 2:]
     H = G.copy()

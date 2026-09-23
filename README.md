@@ -4,13 +4,15 @@ Code and data accompanying:
 
 > I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro,
 > *Thermal shadows in non-linear phonon hydrodynamics: Stokes-like heat-flux
-> wakes past a bluff body*, Proc. R. Soc. A (2026).
+> wakes past a bluff body*, submitted to Proc. R. Soc. A (2026).
 
 Non-linear, weakly non-local Guyer–Krumhansl heat-transport solver for a 2-D
 thin nanolayer with a square obstacle, together with the scripts that
-regenerate every figure and every quantitative claim in the paper, including
-the verification and validation studies added in revision.
+regenerate every figure and every quantitative claim in the paper.
 
+Everything here is deterministic: the scheme is explicit, there is no random
+input, and re-running the pipeline reproduces the distributed `.npz`/`.json`
+files bit for bit on the same platform.
 
 ## Quick start
 
@@ -19,11 +21,10 @@ pip install -r requirements.txt
 ./make_all.sh                  # add --with-longrun for the t = 1200 study
 ```
 
-`make_all.sh` runs the scripts in dependency order and is the authoritative
-description of that order.
+`make_all.sh` runs the scripts in dependency order.
 
-**Figures only.** The archive ships the pre-computed `*_results.npz`, so both
-figure scripts run immediately, in seconds, without repeating any
+The archive ships the pre-computed `*_results.npz`, so both
+figure scripts run without repeating any
 integration:
 
 ```bash
@@ -31,7 +32,7 @@ python make_paper_figures.py   # Figs. 3, 4, 5  -> ./figs
 python make_new_figures.py     # Figs. 2, 6, 7  -> ./figs
 ```
 
-Delete the `.npz` files (or run `make_all.sh`) to regenerate them from
+Delete the `.npz` files (and run `make_all.sh`) to regenerate them from
 scratch instead.
 
 ## Files
@@ -43,9 +44,8 @@ scratch instead.
 | `gk_solver.py` | library: reduced GK model and full three-field model (independent flux-of-heat-flux tensor `Q`, face-centred, exact exponential relaxation update); initial-condition, side-wall (free-slip / no-slip / second-order slip) and obstacle-fill options; analytic channel solutions |
 | `gk_kernels.py` | numba-compiled time loop (optional; the solver falls back to the numpy reference implementation when numba is unavailable) |
 
-The two implementations are independent and agree to machine precision on
-every model variant used in this work — that is what `run_selftest.py`
-checks.
+The two implementations agree to machine precision on
+every model variant used in this work.
 
 ### Runs
 
@@ -63,7 +63,7 @@ Each writes a `*_results.npz` and, where numbers are quoted in the paper, a
 | `run_fullQ.py` | full three-field system vs reduced model: `O(tau_Q/tau_R)` transient convergence, `Q` fields | `fullQ_*` |
 | `run_experiment.py` | effective conductivity of a strip with slip walls: closed-form `kappa_eff` validation and curves vs `Kn` (graphite-ribbon comparison) | `experiment_*` |
 | `run_wake_probe.py` | grid- and domain-convergence of smooth pointwise wake diagnostics | `wake_probe_*` |
-| `run_longrun.py` | long-time IC independence (`t = 1200`) and fully converged 400×200 steady state — **expensive, ~1 h** | `longrun_summary.json`, `ic_long_*.npz`, `wake_fine_relaxed.npz` |
+| `run_longrun.py` | long-time IC independence (`t = 1200`) and fully converged 400×200 steady state | `longrun_summary.json`, `ic_long_*.npz`, `wake_fine_relaxed.npz` |
 
 ### Figures
 
@@ -78,18 +78,8 @@ All figures are written to `./figs/` as both `.pdf` and `.png`.
 ## Requirements
 
 Python 3.9+ with `numpy`, `scipy`, `matplotlib`, and optionally `numba`
-(see `requirements.txt`). Without numba the solver still runs, on the numpy
-reference path, but the baseline `t = 400` integration takes hours rather
-than minutes.
-
-The distributed results were produced with Python 3.12.4 on macOS (Apple
-clang 15), numpy 2.5.3, scipy 1.18.1, matplotlib 3.11.2 and numba 0.67.0;
-`requirements-frozen.txt` pins the full environment. On that machine the
-baseline run (`gk_thermal_wake.py`, 1 225 000 steps on the 200 x 100 mesh)
-takes 231 s with the numba kernel; `make_all.sh` without `--with-longrun`
-completes in a few minutes, and `run_longrun.py` adds of the order of an
-hour.
+(see `requirements.txt`).
 
 ## License
 
-MIT — © 2026 I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro. See `LICENSE`.
+MIT - © 2026 I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro. See `LICENSE`.
