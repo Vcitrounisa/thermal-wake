@@ -1,70 +1,54 @@
 """
-run_selftest.py
-===============
-
-Cross-check of the two implementations of the time loop
-(numpy reference vs numba kernel): short runs of every model variant must
-agree to machine precision.
+Check that the compiled kernel and the numpy reference implementation of the
+time loop agree on every option of the solver.
 """
+
+import sys
 
 import numpy as np
 
-from gk_solver import solve
+from gk_solver import make_grid, solve
 
-# The cross-check is only meaningful if the compiled kernel is actually
-# importable: without numba, gk_solver.solve silently falls back to the numpy
-# reference path and the test would compare numpy against numpy.
 try:
-    import gk_kernels
-except Exception as exc:
-    raise SystemExit(
-        f"run_selftest.py needs the numba kernel to be importable, but "
-        f"`import gk_kernels` failed with: {exc!r}\n"
-        f"Install numba (`pip install numba`) and re-run; without it the "
-        f"solver still works on the numpy path, but this cross-check is "
-        f"not meaningful.")
+    import gk_kernels  # noqa: F401
+except ImportError as exc:
+    sys.exit(f"numba kernel not available ({exc}); install numba to run this test")
 
 CASES = [
-    dict(),                                             
-    dict(ic="cold-rest"),                                       # baseline wake
+    dict(ic="fourier"),
+    dict(ic="cold"),
     dict(ic="fourier-flux"),
-    dict(obstacle_fill="frozen"),
-    dict(obstacle_fill="compat"),
-    dict(sidewalls="noslip", obstacle=False, Lx=2.0, Ly=1.0, Nx=64, Ny=32),
-    dict(sidewalls="slip", slip_C=2.0, slip_alpha=0.25,
-         obstacle=False, Lx=2.0, Ly=1.0, Nx=64, Ny=32),
-    dict(nonlinear=False),
-    dict(full_Q=True, eps_Q=0.1),
-    dict(ic="cold-rest", Thot_ramp=1.0),
+    dict(ic="fourier", T_enclosed=1.0),
+    dict(ic="fourier", nonlinear=False),
+    dict(ic="fourier", full_q=True, eps=0.1),
+    dict(ic="cold", full_q=True, eps=0.1, walls="noslip"),
+    dict(ic="fourier", walls="noslip", obstacle=False, Lx=2.0, Ly=1.0, Nx=64, Ny=32),
+    dict(ic="cold", Nx=100, Ny=50),
 ]
 
-# the `init=` restart path (used by run_longrun.py) is not reachable through a
-# keyword in CASES, so it gets its own entry, built lazily below
-_Ny, _Nx, _Ly, _Lx = 100, 200, 4.0, 8.0
-_Xc, _Yc = np.meshgrid((np.arange(_Nx) + 0.5) * (_Lx / _Nx),
-                       (np.arange(_Ny) + 0.5) * (_Ly / _Ny))
-_rng = np.random.default_rng(0)
-CASES.append(dict(init=(np.maximum(0.0, 1.0 - _Xc / _Lx),
-                        0.1 * _rng.standard_normal((_Ny, _Nx)),
-                        0.1 * _rng.standard_normal((_Ny, _Nx)))))
+# restart from a random state
+Nx, Ny = 200, 100
+g = make_grid(8.0, 4.0, Nx, Ny)
+X, _ = np.meshgrid(g["x_T"], g["y_T"])
+rng = np.random.default_rng(0)
+hy0 = 0.1 * rng.standard_normal((Ny + 1, Nx + 1))
+hy0[0, :] = hy0[-1, :] = hy0[:, 0] = hy0[:, -1] = 0.0
+CASES.append(dict(init=(1.0 - X / 8.0, 0.1 * rng.standard_normal((Ny, Nx)), hy0)))
 
-ok = True
-for kw in CASES:
-    kw = dict({"ic": "fourier-rest", **kw}, tEnd=0.5, tSnap=(0.5,), verbose=False,
-              diag_every=25)
+FIELDS = ("T", "hx", "hy", "hist_max_h", "hist_min_hx")
+
+failed = 0
+for case in CASES:
+    kw = dict(Nx=Nx, Ny=Ny, t_end=0.2, t_snap=(0.2,), hist_every=25)
+    kw.update(case)
     a = solve(use_numba=False, **kw)
     b = solve(use_numba=True, **kw)
-    dT = np.max(np.abs(a["T_final"] - b["T_final"]))
-    dh = np.max(np.abs(a["hx_final"] - b["hx_final"]))
-    dhy = np.max(np.abs(a["hy_final"] - b["hy_final"]))
-    err = max(dT, dh, dhy)
-    if "Qxx" in a:
-        err = max(err, np.max(np.abs(a["Qxx"] - b["Qxx"])),
-                  np.max(np.abs(a["Qyy"] - b["Qyy"])))
-    status = "OK " if err < 1e-12 else "FAIL"
-    if err >= 1e-12:
-        ok = False
-    print(f"{status} err = {err:.2e}  {kw}")
+    names = FIELDS + (("Qxx", "Qyy", "Qyx", "Qxy") if kw.get("full_q") else ())
+    err = max(np.max(np.abs(a[k] - b[k])) for k in names)
+    ok = err < 1e-12
+    failed += not ok
+    label = {k: ("<array>" if k == "init" else v) for k, v in case.items()}
+    print(f"{'ok  ' if ok else 'FAIL'} {err:.1e}  {label}")
 
-print("ALL OK" if ok else "SELF-TEST FAILED")
-raise SystemExit(0 if ok else 1)
+print("all tests passed" if not failed else f"{failed} test(s) failed")
+sys.exit(1 if failed else 0)

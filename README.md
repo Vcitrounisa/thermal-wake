@@ -1,85 +1,99 @@
-# Guyer–Krumhansl thermal-wake solver
+# gk-thermal-wake
 
-Code and data accompanying:
+Solver and studies for the heat-flux wake past a square obstacle in a thin
+layer described by the non-linear, weakly non-local Guyer–Krumhansl
+equations, accompanying
 
 > I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro,
 > *Thermal shadows in non-linear phonon hydrodynamics: Stokes-like heat-flux
 > wakes past a bluff body*, submitted to Proc. R. Soc. A (2026).
 
-Non-linear, weakly non-local Guyer–Krumhansl heat-transport solver for a 2-D
-thin nanolayer with a square obstacle, together with the scripts that
-regenerate every figure and every quantitative claim in the paper.
-
-Everything here is deterministic: the scheme is explicit, there is no random
-input, and re-running the pipeline reproduces the distributed `.npz`/`.json`
-files bit for bit on the same platform.
+The equations are discretised with explicit finite differences on a
+staggered (MAC) grid: the temperature sits at the centres of the energy
+control volumes and the heat-flux components on their faces.  Only the
+physical boundary data are imposed (temperatures at the two ends,
+adiabatic free-slip walls, `h = 0` on the obstacle); there is no boundary
+condition on the temperature at the walls or inside the obstacle, and no
+odd–even mode.  The method is described in [NUMERICS.md](NUMERICS.md).
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
-./make_all.sh                  # add --with-longrun for the t = 1200 study
+./make_all.sh                  # add --with-longrun for the t = 1200 study (about 1 h)
 ```
 
-`make_all.sh` runs the scripts in dependency order.
-
-The archive ships the pre-computed `*_results.npz`, so both
-figure scripts run without repeating any
-integration:
+`results/` contains the output of every study, so the figures can be
+rebuilt without running the solver:
 
 ```bash
-python make_paper_figures.py   # Figs. 3, 4, 5  -> ./figs
-python make_new_figures.py     # Figs. 2, 6, 7  -> ./figs
+python make_figures.py         # -> figs/
 ```
 
-Delete the `.npz` files (and run `make_all.sh`) to regenerate them from
-scratch instead.
+## Contents
 
-## Files
-
-### Solver
-
-| file | contents |
+| file | |
 |---|---|
-| `gk_solver.py` | library: reduced GK model and full three-field model (independent flux-of-heat-flux tensor `Q`, face-centred, exact exponential relaxation update); initial-condition, side-wall (free-slip / no-slip / second-order slip) and obstacle-fill options; analytic channel solutions |
-| `gk_kernels.py` | numba-compiled time loop (optional; the solver falls back to the numpy reference implementation when numba is unavailable) |
+| `gk_solver.py` | grid, obstacle masks, discrete operators, time integration (reduced and full three-field model) |
+| `gk_kernels.py` | numba version of the time loop (optional; the solver falls back to numpy) |
+| `gk_analysis.py` | post-processing: I/O, reconstruction on the T nodes, closure Q, probes, diagnostics |
+| `settings.py` | physical case and grid |
 
-The two implementations agree to machine precision on
-every model variant used in this work.
-
-### Runs
-
-Each writes a `*_results.npz` and, where numbers are quoted in the paper, a
-`*_summary.json`.
-
-| script | what it does | outputs |
+| script | study | output in `results/` |
 |---|---|---|
-| `gk_thermal_wake.py` | baseline switch-on wake of the paper (cold start, `t_end = 400`, 200×100) | `gk_wake_results.npz` |
-| `run_baseline_diagnostics.py` | post-processes the baseline run: positivity and thermal-shadow diagnostics | `baseline_coldstart_summary.json` |
-| `run_fullQ_coldstart.py` | full three-field run at the baseline, `eps = 0.02` (symbols of Fig. 6c) | `fullQ_coldstart.npz` |
-| `run_selftest.py` | numpy vs numba cross-check (machine precision) on all model variants | stdout only |
-| `run_verification.py` | analytic linear-channel benchmark + grid convergence, non-linear channel vs collocation, wake self-convergence, domain-length robustness | `verification_*` |
-| `run_ic_sensitivity.py` | initial-condition independence; obstacle temperature-extension study (average / frozen / compatibility fill) | `ic_sensitivity_*` |
-| `run_fullQ.py` | full three-field system vs reduced model: `O(tau_Q/tau_R)` transient convergence, `Q` fields | `fullQ_*` |
-| `run_experiment.py` | effective conductivity of a strip with slip walls: closed-form `kappa_eff` validation and curves vs `Kn` (graphite-ribbon comparison) | `experiment_*` |
-| `run_wake_probe.py` | grid- and domain-convergence of smooth pointwise wake diagnostics | `wake_probe_*` |
-| `run_longrun.py` | long-time IC independence (`t = 1200`) and fully converged 400×200 steady state | `longrun_summary.json`, `ic_long_*.npz`, `wake_fine_relaxed.npz` |
+| `run_selftest.py` | numba kernel vs numpy reference on every option | – |
+| `run_verification.py` | linear channel vs analytic solution (Ny = 8…64), non-linear channel vs collocation | `verification.*` |
+| `run_baseline.py` | baseline wake: cold start, t = 400 | `baseline.npz` |
+| `run_baseline_diagnostics.py` | positivity of h_x, ignition, thermal shadow, odd–even content | `baseline.json` |
+| `run_fullq_baseline.py` | baseline with the full three-field model, ε = 0.02 | `fullq_baseline.npz` |
+| `run_fullq_convergence.py` | full vs reduced model for ε = 0.02…0.2 | `fullq.*` |
+| `run_domain_length.py` | steady wake with the outlet moved downstream by 4 and 8 and the inlet upstream by 4, at the same heat flux | `domain_length.*` |
+| `run_ic_sensitivity.py` | independence of the initial state; inert T nodes inside the obstacle | `ic_sensitivity.*` |
+| `run_longrun.py` | independence of the initial state at t = 1200 (opt-in) | `longrun*` |
+| `make_figures.py` | all figures | `figs/` |
 
-### Figures
+## Figures
 
-| script | paper figures |
+| file | content |
 |---|---|
-| `make_new_figures.py` | **Fig. 2** (`fig_verification`), **Fig. 6** (`fig_Q`), **Fig. 7** (`fig_experiment`), plus the two response-letter figures `fig_resp_ic`, `fig_resp_fill` |
-| `make_paper_figures.py` | **Fig. 3** (`fig_evolution`), **Fig. 4** (`fig_steady`), **Fig. 5** (`fig_zoom_centreline`) |
+| `fig_evolution` | build-up of the wake: \|h\| and streamlines at t = 5, 30, 100, 400 |
+| `fig_steady` | quasi-stationary temperature and heat flux |
+| `fig_zoom_centreline` | isotherms and flux around the obstacle, centre-line profiles |
+| `fig_verification` | channel benchmarks, grid convergence of the channel, reduction of the full model |
+| `fig_Q` | flux of the heat flux: closure vs full model |
+| `fig_initial_state` | independence of the initial state |
+| `fig_enclosed_T` | the T nodes inside the obstacle do not affect the solution |
+| `fig_obstacle_nodes` | staggered nodes around a corner of the obstacle |
 
-All figures are written to `./figs/` as both `.pdf` and `.png`.
+## Main results
 
+| quantity | value | file |
+|---|---|---|
+| linear channel, observed orders (Ny = 8→64) | 1.95, 1.97, 1.99 | `verification.json` |
+| non-linear channel vs collocation (min Φ = 0.61) | 2.8e-04 | `verification.json` |
+| full vs reduced model, slope in ε (t = 2, 5, 18) | 0.99–1.11 | `fullq.json` |
+| baseline max \|h\| at t = 400 | 0.1512 | `baseline.json` |
+| baseline min h_x at t = 400 (fluid) | +2.27e-04 | `baseline.json` |
+| odd–even content of T (largest at the obstacle corners) | 9.8e-03 | `baseline.json` |
+| cold vs Fourier start, max \|ΔT\| at t = 400 / 1200 | 9.9e-05 / 1.4e-11 | `ic_sensitivity.json`, `longrun.json` |
+| Fourier start with h = 0 vs h = G e_x, max \|ΔT\| / max \|Δh\| at t = 400 | 3.6e-07 / 1.2e-07 | `ic_sensitivity.json` |
+| enclosed T nodes set to 0, T_F or 1: max fluid \|ΔT\| | 0.0 | `ic_sensitivity.json` |
+| outlet moved downstream by 4 / 8, largest change of h/Q around the obstacle | 5.9e-05 / 6.3e-05 | `domain_length.json` |
+| inlet moved upstream by 4, largest change of h/Q in the wake | 1.5e-05 | `domain_length.json` |
+
+## Grid
+
+All obstacle runs use a 200×100 grid (Δx = Δy = 0.04).  The discretisation
+is verified on the channel problem, where the linear solution converges at
+second order under grid refinement.
 
 ## Requirements
 
-Python 3.9+ with `numpy`, `scipy`, `matplotlib`, and optionally `numba`
-(see `requirements.txt`).
+Python ≥ 3.9 with numpy, scipy, matplotlib; numba is optional but strongly
+recommended (the numpy path is several times slower).  The distributed
+results were produced with Python 3.11, numpy 2.4, scipy 1.17,
+matplotlib 3.10 and numba 0.67 on Linux x86-64.
 
 ## License
 
-MIT - © 2026 I. Carlomagno, A. Sellitto, N. Geracitano, V. Citro. See `LICENSE`.
+MIT, see [LICENSE](LICENSE).

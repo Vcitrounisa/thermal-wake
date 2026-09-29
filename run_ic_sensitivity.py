@@ -1,100 +1,73 @@
 """
-run_ic_sensitivity.py
-=====================
-
-Two studies on the baseline wake configuration:
-
-  (1) Initial-condition independence: the quasi-steady state is an attractor.
-      Three initial states are integrated to t = 400 (snapshots at t = 18, 400):
-        - "cold-rest"     : T = 0 everywhere,   h = 0         (paper baseline:
-                            equilibrium with the cold reservoir; hot wall
-                            switched on at t = 0)
-        - "fourier-rest"  : T = Fourier profile, h = 0        (verification runs)
-        - "fourier-flux"  : T = Fourier profile, h = G e_x    (Fourier-consistent
-                            initial flux)
-      and the pairwise differences of the final fields are reported.
-
-  (2) Obstacle temperature-extension study:
-        - "avg"    : neighbour-average fill (paper baseline)
-        - "frozen" : no fill; T stays at its initial value inside the mask
-                     (turns the obstacle into an isothermal cold spot)
-        - "compat" : fill honouring the wall-compatibility relation
-                     dT/dn = Kn^2 [div(Phi grad h)].n
-
-Writes ic_sensitivity_results.npz + ic_sensitivity_summary.json.
+Initial state: cold start (run_baseline.py) vs Fourier start with h = 0 and
+with h = G e_x, at t = 18 and 400.  Enclosed T nodes: runs with their
+initial value set to 0, T_F and 1.
 """
 
 import json
-from pathlib import Path
 
 import numpy as np
 
+from gk_analysis import load_result
 from gk_solver import solve
+from settings import BASELINE, CASE, T_SHORT, results_path
 
-here = Path(__file__).resolve().parent
-out, summary = {}, {}
+common = dict(CASE, **BASELINE)
 
-# ---------------------------------------------------------------------------
-# (1) initial-condition independence
-# ---------------------------------------------------------------------------
-runs = {}
-for ic in ["fourier-rest", "cold-rest", "fourier-flux"]:
-    print(f"--- IC = {ic}")
-    runs[ic] = solve(ic=ic, tEnd=400.0, tSnap=(18.0, 400.0), verbose=False,
-                     diag_every=200)
 
-fluid = ~runs["fourier-rest"]["inObs"]
-base = runs["fourier-rest"]
-summary["ic_diffs"] = {}
-for ic in ["cold-rest", "fourier-flux"]:
-    r = runs[ic]
-    d = {}
-    for k, t in [(0, 18.0), (1, 400.0)]:
-        dT = float(np.max(np.abs(r["snap_T"][k] - base["snap_T"][k])[fluid]))
-        dh = float(np.max(np.hypot(r["snap_hx"][k] - base["snap_hx"][k],
-                                   r["snap_hy"][k] - base["snap_hy"][k])[fluid]))
-        d[f"t{t:g}"] = dict(max_dT=dT, max_dh=dh)
-        print(f"    t={t:5.1f}: max|dT| = {dT:.3e},  max|dh| = {dh:.3e}")
-    summary["ic_diffs"][ic] = d
+def snapshot(res, t):
+    k = int(np.argmin(np.abs(res["snap_t"] - t)))
+    return res["snap_T"][k], res["snap_hx"][k], res["snap_hy"][k]
 
-jc = base["Ny"] // 2
-out["x"] = base["xc"]
+
+def differences(a, b, masks):
+    fT, fx, fy = masks
+    return {"max_dT": float(np.abs(a[0] - b[0])[fT].max()),
+            "max_dh": float(max(np.abs(a[1] - b[1])[fx].max(),
+                                np.abs(a[2] - b[2])[fy].max()))}
+
+
+# (1) initial state
+runs = {"cold": load_result(results_path("baseline.npz"))}
+for ic in ("fourier", "fourier-flux"):
+    print(f"initial state: {ic}")
+    runs[ic] = solve(**common, ic=ic, t_end=400.0, t_snap=(T_SHORT, 400.0), hist_every=200)
+masks = (~runs["cold"]["in_obstacle"], ~runs["cold"]["solid_hx"], ~runs["cold"]["solid_hy"])
+
+summary = {"initial_state": {}}
+for ic in ("fourier", "fourier-flux"):
+    summary["initial_state"][ic] = {
+        f"t{t:g}": differences(snapshot(runs[ic], t), snapshot(runs["cold"], t), masks)
+        for t in (T_SHORT, 400.0)}
+    print(ic, summary["initial_state"][ic])
+summary["initial_state"]["fourier-flux_vs_fourier"] = {
+    f"t{t:g}": differences(snapshot(runs["fourier-flux"], t), snapshot(runs["fourier"], t), masks)
+    for t in (T_SHORT, 400.0)}
+print("fourier-flux vs fourier", summary["initial_state"]["fourier-flux_vs_fourier"])
+
+out = {}
+jc = BASELINE["Ny"] // 2
 for ic, r in runs.items():
-    out[f"T_mid_{ic}"] = r["T_final"][jc, :]
-    out[f"hx_mid_{ic}"] = r["hx_final"][jc, :]
-    out[f"diag_t_{ic}"] = r["diag_t"]
-    out[f"diag_minhx_{ic}"] = r["diag_min_hx"]
-    out[f"diag_maxh_{ic}"] = r["diag_max_h"]   # used by make_new_figures (fig_resp_ic)
-out["inobs_x"] = (np.abs(base["xc"] - base["xObs"]) <= base["LObs"] / 2)
+    out[f"T_mid_{ic}"] = r["T"][jc]
+    out[f"hist_t_{ic}"], out[f"hist_max_h_{ic}"] = r["hist_t"], r["hist_max_h"]
+out["x"] = runs["cold"]["x_T"]
 
-# ---------------------------------------------------------------------------
-# (2) obstacle temperature-extension study
-# ---------------------------------------------------------------------------
-fills = {}
-for fill in ["avg", "frozen", "compat"]:
-    print(f"--- obstacle_fill = {fill}")
-    fills[fill] = solve(obstacle_fill=fill, ic="fourier-rest", tEnd=18.0,
-                        tSnap=(18.0,), verbose=False)
+# (2) enclosed T nodes
+variants = {"zero": 0.0, "fourier": None, "one": 1.0}
+enc = {}
+for name, value in variants.items():
+    print(f"enclosed T nodes: {name}")
+    enc[name] = solve(**common, ic="fourier", t_end=T_SHORT, T_enclosed=value)
+summary["enclosed_T"] = {
+    name: differences((enc[name]["T"], enc[name]["hx"], enc[name]["hy"]),
+                      (enc["zero"]["T"], enc["zero"]["hx"], enc["zero"]["hy"]), masks)
+    for name in ("fourier", "one")}
+print(summary["enclosed_T"])
+for name, r in enc.items():
+    out[f"enclosed_T_{name}"] = r["T"]
+out["enclosed"] = enc["zero"]["enclosed_T"]
+out["in_obstacle"] = enc["zero"]["in_obstacle"]
+out["y"] = enc["zero"]["y_T"]
 
-summary["fill_diffs"] = {}
-for fill in ["frozen", "compat"]:
-    r = fills[fill]
-    dT = float(np.max(np.abs(r["T_final"] - fills["avg"]["T_final"])[fluid]))
-    dh = float(np.max(np.hypot(r["hx_final"] - fills["avg"]["hx_final"],
-                               r["hy_final"] - fills["avg"]["hy_final"])[fluid]))
-    summary["fill_diffs"][fill] = dict(max_dT=dT, max_dh=dh)
-    print(f"    {fill}: max|dT| = {dT:.3e},  max|dh| = {dh:.3e}")
-
-for fill, r in fills.items():
-    out[f"fill_T_{fill}"] = r["T_final"]
-    out[f"fill_hx_{fill}"] = r["hx_final"]
-    out[f"fill_hy_{fill}"] = r["hy_final"]
-    out[f"fill_Tmid_{fill}"] = r["T_final"][jc, :]
-out["Xc"], out["Yc"] = base["Xc"], base["Yc"]
-out["inObs"] = base["inObs"]
-out["xObs"], out["yObs"], out["LObs"] = base["xObs"], base["yObs"], base["LObs"]
-
-
-np.savez(here / "ic_sensitivity_results.npz", **out)
-(here / "ic_sensitivity_summary.json").write_text(json.dumps(summary, indent=2))
-print(json.dumps(summary, indent=2))
+np.savez(results_path("ic_sensitivity.npz"), **out)
+results_path("ic_sensitivity.json").write_text(json.dumps(summary, indent=2))
