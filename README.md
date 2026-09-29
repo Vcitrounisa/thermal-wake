@@ -1,4 +1,4 @@
-# gk-thermal-wake
+# Gk-thermal-wake
 
 Solver and studies for the heat-flux wake past a square obstacle in a thin
 layer described by the non-linear, weakly non-local Guyer–Krumhansl
